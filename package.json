@@ -1,0 +1,27 @@
+{
+  "name": "servicearea-planner",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Daily work-order and manual route planner for small maintenance teams",
+  "engines": { "node": ">=22.12.0" },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "api": "node --watch server/index.js",
+    "build": "vite build",
+    "start": "node server/index.js",
+    "seed": "node scripts/seed.js",
+    "demo": "npm run build && node scripts/demo.js",
+    "test": "node scripts/test.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "mongodb": "^6.21.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "mongodb-memory-server-core": "^10.2.0",
+    "vite": "^7.0.0"
+  }
+}
