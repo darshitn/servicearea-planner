@@ -108,7 +108,12 @@ export default function Account({ onLogin }) {
         <form onSubmit={submit} className="account-form" aria-busy={busy}>
           {mode !== 'login' && <label>Your name<input {...field('name')} required maxLength={120} autoComplete="name" /></label>}
           {mode === 'register' && <label>Team name<input {...field('teamName')} required maxLength={120} autoComplete="organization" /></label>}
-          {mode === 'join' && <label>Invitation code<input {...field('invitation')} required autoComplete="off" spellCheck={false} /></label>}
+          {mode === 'join' && (
+            <label>
+              Invitation link or code
+              <input {...field('invitation')} required autoComplete="off" spellCheck={false} placeholder="Paste the invitation from your coordinator" />
+            </label>
+          )}
           <label>Email address<input {...field('email')} type="email" required maxLength={254} autoComplete="email" placeholder="you@example.com" /></label>
           <div className="account-password">
             <label htmlFor="account-password">Password</label>

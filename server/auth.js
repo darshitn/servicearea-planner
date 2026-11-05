@@ -10,6 +10,19 @@ const cookieOptions = { httpOnly: true, sameSite: 'strict', secure: process.env.
 const getToken = req => (req.headers.cookie || '').split(';').map(part => part.trim()).find(part => part.startsWith(cookieName + '='))?.slice(cookieName.length + 1)
 const safeUser = user => ({ id: user._id.toHexString(), name: user.name, email: user.email, role: user.role, teamName: user.teamName })
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function invitationToken(value) {
+  let token = typeof value === 'string' ? value.trim() : ''
+  if (/^https?:\/\//i.test(token) && URL.canParse(token)) {
+    const codes = new URL(token).searchParams.getAll('invite')
+    token = codes.length === 1 ? codes[0].trim() : ''
+  }
+  if (!/^[a-f0-9]{64}$/i.test(token)) {
+    throw new RequestError(400, 'Enter the full invitation link or the 64-character invitation code.')
+  }
+  return token.toLowerCase()
+}
+
 function credentials(body) {
   const name = typeof body?.name === 'string' ? body.name.trim() : ''
   const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : ''
@@ -80,8 +93,7 @@ export function mountAuth(app, db) {
   })
   app.post('/api/auth/join', limitAttempts, async (req, res) => {
     const { name, email, password } = credentials(req.body)
-    const token = req.body.invitation
-    if (typeof token !== 'string' || !/^[a-f0-9]{64}$/.test(token)) throw new RequestError(400, 'Invalid invitation.')
+    const token = invitationToken(req.body.invitation)
     const passwordHash = await hashPassword(password)
     const invitationId = hash(token)
     const invitation = await invitations.findOne({ _id: invitationId, expiresAt: { $gt: new Date() }, used: false })

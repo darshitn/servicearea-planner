@@ -193,8 +193,11 @@ test('team isolation and technician permissions are enforced over HTTP', async (
   assert.equal(inviteResponse.status, 201);
   const { invitation } = await inviteResponse.json();
   cookie = undefined;
+  const invitationUrl = new URL('/', base);
+  invitationUrl.searchParams.set('invite', invitation);
   const join = await fetch(base.replace('/work-orders', '/auth/join'), json('POST', {
-    name: 'Technician', email: 'tech@example.com', password: 'a sufficiently long password', invitation,
+    name: 'Technician', email: 'tech@example.com', password: 'a sufficiently long password',
+    invitation: `  ${invitationUrl.href}  `,
   }));
   assert.equal(join.status, 201);
   const technician = (await join.json()).user;
