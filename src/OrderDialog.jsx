@@ -46,6 +46,7 @@ export default function OrderDialog({ order, date, onClose, onSaved, user, membe
       name: key,
       value: values[key],
       maxLength: limits[key],
+      disabled: user.role === 'technician' && !['status', 'notes'].includes(key),
       onChange: (e) => {
         setValues({ ...values, [key]: e.target.value })
         setError('')
@@ -162,7 +163,7 @@ export default function OrderDialog({ order, date, onClose, onSaved, user, membe
             save()
           }}
         >
-          <fieldset disabled={busy || user.role === 'technician'}>
+          <fieldset disabled={busy}>
             <div className="field-grid">
               <label>
                 Service / job title
@@ -178,7 +179,7 @@ export default function OrderDialog({ order, date, onClose, onSaved, user, membe
               </label>
               <label>
                 Assigned staff
-                <select value={assignedUserId} onChange={event => setAssignedUserId(event.target.value)} required>
+                <select value={assignedUserId} onChange={event => setAssignedUserId(event.target.value)} required disabled={user.role === 'technician'}>
                   <option value="">Select a team member</option>
                   {members.map(member => <option key={member.id} value={member.id}>{member.name} ({member.role})</option>)}
                 </select>
@@ -227,7 +228,6 @@ export default function OrderDialog({ order, date, onClose, onSaved, user, membe
               </label>
             </div>
           </fieldset>
-          {user.role === 'technician' && <div className="field-grid"><label>Status<select {...field('status')}>{statuses.map(s => <option key={s}>{s}</option>)}</select></label><label>Completion notes<textarea {...field('notes')} required={values.status === 'Completed'} /></label></div>}
           {error && (
             <p role="alert" className="form-error">
               {error}
