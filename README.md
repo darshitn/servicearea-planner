@@ -4,9 +4,7 @@
 
 A coordinator can open a day's schedule, see which staff member is visiting each customer, and plan the route one service area at a time. Visits within an area appear in appointment order. The coordinator decides how to travel between areas.
 
-This assignment is a local demonstration for one coordinator. Enter consistent area names when creating visits. The address is shown on the itinerary, while the service area determines grouping. Routes are planned manually using the schedule.
-
-The demonstration has no user login or team access controls. Keep it on your own computer and use fictional customer information.
+Coordinators create a team, invite technicians and assign visits to team members. Technicians can update the status and notes of their assigned visits. Use consistent area names, since grouping uses the area field.
 
 ## Run the assignment
 
@@ -19,11 +17,32 @@ npm run demo
 
 Open **http://127.0.0.1:4000**. On first use, the demo downloads a MongoDB server binary. The Windows download is about 600 MB. Subsequent launches reuse the cached binary.
 
-The demo adds six fictional visits across Domlur, Indiranagar and Ulsoor on the first launch for each local calendar day. It saves changes in `.local/demo-data/`. You can close the demo with Ctrl+C and start it again to show that edits persist. The demo database and downloaded binary are local machine files.
+Create a coordinator account using **Create team**. The local database is saved in `.local/demo-data/`. Existing visits created before teams were introduced remain in the database but are not shown in team workspaces. Stop the demo with Ctrl+C.
+
+Create a technician invitation from the dashboard and share its link. Invitations are single-use and expire after 24 hours. The technician can register through the link and then be assigned visits.
+
+## Hosted configuration
+
+Use a Node hosting service with HTTPS and an external MongoDB database. Set these values in the host's environment configuration:
+
+- Build command: `npm ci --include=dev && npm run build`
+- Start command: `npm start`
+- `MONGODB_URI`: Atlas connection string, stored as a secret
+- `NODE_ENV=production`: enables secure session cookies
+- `APP_ORIGIN`: the exact public HTTPS origin, without a trailing slash
+- `PORT`: supplied by the host
+- `HOST=0.0.0.0`: required by typical web-service hosts
+- `TRUST_PROXY`: verified trusted proxy IP ranges or hop count for the chosen host. Leave unset for direct connections. Never set blindly to `true`.
+
+The database user needs permission to create indexes and read and write application collections. The app serves React and the API from the same origin. Never commit the real connection string or `.env` file.
+
+Email verification and password reset, member removal, invitation revocation, and real-time updates are not implemented. Authentication attempt limits are stored in MongoDB and shared across server processes. Deployment still requires verification of the host's proxy configuration and the browser workflow over HTTPS.
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the Atlas and hosting walkthrough.
 
 ## Demonstrate the workflow
 
-1. Open today's itinerary. Read the appointment windows in one area and identify the staff assigned to those visits.
+1. Register a coordinator and open today's itinerary.
 2. Select **New work order**. Enter a customer, job, address and assigned staff member. Choose an existing area and a time between two visits to see the new order inserted in the right place.
 3. Edit the visit and select **Completed**. Try saving with empty completion notes, then enter the work performed and save. Filter by **Completed** to show the updated visit.
 4. Move the visit to tomorrow. Switch between the dates, refresh the browser and check that the change persists. Use **Delete visit** inside the edit form to remove a work order.
@@ -44,15 +63,14 @@ The demo adds six fictional visits across Domlur, Indiranagar and Ulsoor on the 
 
 ## Use an existing MongoDB instance
 
-Copy `.env.example` to `.env`. Set `MONGODB_URI` to a URI that includes the database name, or supply a separate `MONGODB_DB`. The normal server defaults to a local MongoDB instance and listens on the loopback interface. The app has no authentication.
+Copy `.env.example` to `.env`. Set `MONGODB_URI` to a URI that includes the database name, or supply a separate `MONGODB_DB`. The normal server defaults to a local MongoDB instance and listens on the loopback interface.
 
 ```powershell
 npm run build
-npm run seed
 npm start
 ```
 
-`npm run seed` is optional. It adds the fictional appointments to the configured database for today. For front-end development, run `npm run api` and `npm run dev` in separate terminals. Vite prints the development URL and forwards API requests to Express.
+For front-end development, run `npm run api` and `npm run dev` in separate terminals. Vite prints the development URL and forwards API requests to Express. Existing standalone seed records do not belong to a team.
 
 ## Verify the implementation
 

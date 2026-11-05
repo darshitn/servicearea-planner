@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Icon, RouteMap } from './icons'
 import OrderDialog, { statuses } from './OrderDialog'
+import Account from './Account'
+import { authenticatedFetch as fetch } from './api'
 import './styles.css'
 
 function localDate(day = new Date()) {
@@ -34,7 +36,7 @@ function groupByArea(orders) {
       ),
     }))
 }
-function WorkOrder({ order, onEdit }) {
+function WorkOrder({ order, onEdit, user }) {
   return (
     <li className="visit">
       <div className="visit-time">
@@ -65,24 +67,45 @@ function WorkOrder({ order, onEdit }) {
           {order.staff}
         </span>
       </div>
-      <button
+      {(user.role === 'coordinator' || order.assignedUserId === user.id) && <button
         className="edit-button"
         aria-label={'Edit ' + order.service + ' for ' + order.customer}
         onClick={() => onEdit(order)}
         title="Edit work order"
       >
         <Icon name="edit" size={16} />
-      </button>
+      </button>}
     </li>
   )
 }
-function App() {
+function Planner({ user, onLogout, logoutError }) {
   const [date, setDate] = useState(() => localDate())
   const [filter, setFilter] = useState('All statuses')
   const [result, setResult] = useState({ date: '', version: -1, orders: [], error: '' })
   const [version, setVersion] = useState(0)
   const [editor, setEditor] = useState(null)
   const [notice, setNotice] = useState('')
+  const [members, setMembers] = useState([])
+  const [invite, setInvite] = useState('')
+  useEffect(() => {
+    const controller = new AbortController()
+    fetch('/api/team/members', { signal: controller.signal })
+      .then(response => {
+        if (!response.ok) throw new Error('Could not refresh team members.')
+        return response.json()
+      })
+      .then(data => setMembers(data.members || []))
+      .catch(error => { if (!controller.signal.aborted) setNotice(error.message) })
+    return () => controller.abort()
+  }, [editor])
+  async function createInvite() {
+    try {
+      const response = await fetch('/api/team/invitations', { method: 'POST' })
+      const data = await response.json()
+      if (response.ok) setInvite(window.location.origin + '/?invite=' + data.invitation)
+      else setNotice(data.error || 'Could not create invitation.')
+    } catch { setNotice('Could not reach the server. Please try again.') }
+  }
   useEffect(() => {
     const controller = new AbortController()
     async function load() {
@@ -148,11 +171,13 @@ function App() {
             </span>
           </div>
           <span className="workspace-label">
-            <span className="tiny-square" /> Field operations
+            <span className="tiny-square" /> {user.teamName} · {user.name} · {user.role}
           </span>
+          <button className="secondary" onClick={onLogout}>Log out</button>
         </div>
       </header>
       <main className="shell workspace">
+        {logoutError && <p className="form-error" role="alert">{logoutError}</p>}
         <section className="hero" aria-labelledby="page-title">
           <RouteMap />
           <div className="hero-copy">
@@ -189,11 +214,12 @@ function App() {
               <h2 id="schedule-title">Area itinerary</h2>
               <p>Visits grouped by service area, in appointment order.</p>
             </div>
-            <button className="primary new-order" onClick={add}>
+            {user.role === 'coordinator' && <button className="primary new-order" onClick={add}>
               <Icon name="plus" size={18} />
               New work order
-            </button>
+            </button>}
           </div>
+          {user.role === 'coordinator' && <div className="account-switch"><button className="secondary" onClick={createInvite}>Create technician invitation</button>{invite && <label>Invitation link (expires in 24 hours)<input readOnly value={invite} onFocus={event => event.target.select()} /></label>}</div>}
           <div className="toolbar">
             <div className="day-controls">
               <button className="arrow" aria-label="Previous day" onClick={() => stepDay(-1)}>
@@ -270,12 +296,12 @@ function App() {
                     ? 'Choose another status to see visits for this day.'
                     : 'Create a work order to start planning this day’s visits.'}
                 </p>
-                <button
+                {(orders.length || user.role === 'coordinator') && <button
                   className="secondary"
                   onClick={orders.length ? () => setFilter('All statuses') : add}
                 >
                   {orders.length ? 'Show all statuses' : 'Add first visit'}
-                </button>
+                </button>}
               </div>
             ) : (
               groups.map(({ area, orders: areaOrders }, i) => (
@@ -295,6 +321,7 @@ function App() {
                       <WorkOrder
                         key={order.id}
                         order={order}
+                        user={user}
                         onEdit={(o) => setEditor({ order: o })}
                       />
                     ))}
@@ -319,6 +346,8 @@ function App() {
       {editor && (
         <OrderDialog
           order={editor.order}
+          user={user}
+          members={members}
           date={date}
           onClose={() => setEditor(null)}
           onSaved={(newDate, message) => {
@@ -334,4 +363,24 @@ function App() {
   )
 }
 
+function App() {
+  const [user, setUser] = useState(undefined)
+  const [logoutError, setLogoutError] = useState('')
+  useEffect(() => {
+    const expire = () => setUser(null)
+    window.addEventListener('planner-session-expired', expire)
+    return () => window.removeEventListener('planner-session-expired', expire)
+  }, [])
+  useEffect(() => { fetch('/api/auth/me').then(response => response.json()).then(data => setUser(data.user)).catch(() => setUser(null)) }, [])
+  async function logout() {
+    setLogoutError('')
+    try {
+      const response = await fetch('/api/auth/logout', { method: 'POST' })
+      if (!response.ok) throw new Error('Logout failed. Your session may still be active. Try again.')
+      setUser(null)
+    } catch (error) { setLogoutError(error.message) }
+  }
+  if (user === undefined) return <main className="shell workspace">Loading…</main>
+  return user ? <Planner user={user} onLogout={logout} logoutError={logoutError} /> : <Account onLogin={setUser} />
+}
 createRoot(document.getElementById('root')).render(<App />)

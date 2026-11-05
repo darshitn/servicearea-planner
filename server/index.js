@@ -6,7 +6,7 @@ const envPath = fileURLToPath(new URL('../.env', import.meta.url))
 if (existsSync(envPath)) process.loadEnvFile(envPath)
 
 const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/servicearea_planner'
-const host = process.env.HOST || '127.0.0.1'
+const host = process.env.HOST || (process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1')
 const port = Number(process.env.PORT || 4000)
 
 async function start() {

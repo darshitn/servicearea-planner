@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Icon } from './icons'
+import { authenticatedFetch as fetch } from './api'
 
 export const statuses = ['Scheduled', 'In progress', 'Completed']
 const blank = {
@@ -15,7 +16,7 @@ const blank = {
 }
 const limits = { customer: 120, service: 160, area: 80, address: 240, staff: 120, notes: 2000 }
 
-export default function OrderDialog({ order, date, onClose, onSaved }) {
+export default function OrderDialog({ order, date, onClose, onSaved, user, members }) {
   const editing = Boolean(order)
   const [values, setValues] = useState(() =>
     Object.fromEntries(
@@ -25,6 +26,7 @@ export default function OrderDialog({ order, date, onClose, onSaved }) {
       ]),
     ),
   )
+  const [assignedUserId, setAssignedUserId] = useState(order?.assignedUserId || '')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -62,7 +64,9 @@ export default function OrderDialog({ order, date, onClose, onSaved }) {
       const path = '/api/work-orders' + (editing ? '/' + encodeURIComponent(order.id) : '')
       const changes = editing
         ? Object.fromEntries(Object.entries(values).filter(([key, value]) => value !== order[key]))
-        : values
+        : { ...values }
+      delete changes.staff
+      if (!editing || assignedUserId !== order.assignedUserId) changes.assignedUserId = assignedUserId
       if (!remove && !Object.keys(changes).length) {
         onClose()
         return
@@ -158,7 +162,7 @@ export default function OrderDialog({ order, date, onClose, onSaved }) {
             save()
           }}
         >
-          <fieldset disabled={busy}>
+          <fieldset disabled={busy || user.role === 'technician'}>
             <div className="field-grid">
               <label>
                 Service / job title
@@ -174,7 +178,10 @@ export default function OrderDialog({ order, date, onClose, onSaved }) {
               </label>
               <label>
                 Assigned staff
-                <input {...field('staff')} placeholder="Staff member’s name" required />
+                <select value={assignedUserId} onChange={event => setAssignedUserId(event.target.value)} required>
+                  <option value="">Select a team member</option>
+                  {members.map(member => <option key={member.id} value={member.id}>{member.name} ({member.role})</option>)}
+                </select>
               </label>
               <label className="wide">
                 Visit address
@@ -220,13 +227,14 @@ export default function OrderDialog({ order, date, onClose, onSaved }) {
               </label>
             </div>
           </fieldset>
+          {user.role === 'technician' && <div className="field-grid"><label>Status<select {...field('status')}>{statuses.map(s => <option key={s}>{s}</option>)}</select></label><label>Completion notes<textarea {...field('notes')} required={values.status === 'Completed'} /></label></div>}
           {error && (
             <p role="alert" className="form-error">
               {error}
             </p>
           )}
           <div className="dialog-actions">
-            {editing && (
+            {editing && user.role === 'coordinator' && (
               <button
                 type="button"
                 className="text-danger"
