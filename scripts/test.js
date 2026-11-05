@@ -9,7 +9,7 @@ const mongo = await MongoMemoryServer.create({
   instance: { ip: '127.0.0.1', storageEngine: 'wiredTiger' }
 });
 try {
-  const test = spawn(process.execPath, ['--test', 'tests/work-orders.test.js', 'tests/passwords.test.js', 'tests/authorization.test.js'], {
+  const test = spawn(process.execPath, ['--test', 'tests/work-orders.test.js', 'tests/passwords.test.js', 'tests/authorization.test.js', 'tests/startup-errors.test.js'], {
     stdio: 'inherit',
     env: { ...process.env, MONGODB_URI: mongo.getUri() }
   });

@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { startServer } from './start.js'
+import { startupDiagnostic } from './startup-errors.js'
 
 const envPath = fileURLToPath(new URL('../.env', import.meta.url))
 if (existsSync(envPath)) process.loadEnvFile(envPath)
@@ -10,6 +11,11 @@ const host = process.env.HOST || (process.env.NODE_ENV === 'production' ? '0.0.0
 const port = Number(process.env.PORT || 4000)
 
 async function start() {
+  if (process.env.NODE_ENV === 'production' && !process.env.MONGODB_URI?.trim()) {
+    const error = new Error('Database configuration is missing.')
+    error.code = 'MISSING_MONGODB_URI'
+    throw error
+  }
   const server = await startServer({ uri, dbName: process.env.MONGODB_DB, host, port })
   console.log('ServiceArea Planner listening on ' + server.url)
   const stop = () => {
@@ -24,7 +30,6 @@ async function start() {
 start().catch(error => {
   // Connection strings may contain credentials. Keep startup output actionable
   // without printing driver errors that could expose connection details.
-  if (error.code === 'EADDRINUSE') console.error('API port is in use. Choose a different PORT.')
-  else console.error('API startup failed (' + error.name + '). Check MongoDB, MONGODB_URI, HOST and PORT.')
+  console.error(startupDiagnostic(error))
   process.exitCode = 1
 })
