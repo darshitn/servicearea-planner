@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Daily work-order and manual route planner for small maintenance teams",
-  "engines": { "node": ">=22.12.0" },
+  "engines": { "node": ">=24.21.0 <25" },
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "api": "node --watch server/index.js",

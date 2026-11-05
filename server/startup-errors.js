@@ -26,7 +26,12 @@ export function startupDiagnostic(error) {
   else if (codes.has('ENOTFOUND') || codes.has('EAI_AGAIN') || codes.has('ENODATA') || codes.has('ECONNREFUSED') && stage !== 'http-listen') {
     detail = 'DNS_OR_CONNECTION_REFUSED: Verify the Atlas hostname, active cluster and network access; also check for an accidental localhost URI.'
   } else if (codes.has('CERT_HAS_EXPIRED') || codes.has('UNABLE_TO_VERIFY_LEAF_SIGNATURE') || codes.has('ERR_SSL_TLSV1_ALERT_INTERNAL_ERROR') || codes.has('ERR_TLS_CERT_ALTNAME_INVALID')) {
-    detail = 'TLS_FAILED: Check the certificate chain, runtime trust store and network path. Keep TLS verification enabled.'
+    const tlsCodes = ['CERT_HAS_EXPIRED', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE', 'ERR_SSL_TLSV1_ALERT_INTERNAL_ERROR', 'ERR_TLS_CERT_ALTNAME_INVALID'].filter(code => codes.has(code))
+    detail = 'TLS_FAILED [' + tlsCodes.join(', ') + ']: ' +
+      (codes.has('ERR_SSL_TLSV1_ALERT_INTERNAL_ERROR')
+        ? 'The peer rejected the TLS handshake. Verify all Render outbound ranges in Atlas Network Access and use the pinned Node runtime. This alert alone does not prove a certificate problem.'
+        : 'Verify the certificate chain, cluster hostname and runtime trust store.') +
+      ' Keep TLS verification enabled.'
   } else if (names.has('MongoParseError') || names.has('MongoInvalidArgumentError')) {
     detail = 'URI_FORMAT: Use the Atlas driver URI with actual values and URI-encoded credentials.'
   } else if (names.has('MongoServerSelectionError') || names.has('MongoNetworkTimeoutError') || codes.has('ETIMEDOUT')) {

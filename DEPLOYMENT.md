@@ -16,7 +16,7 @@ Use this walkthrough after the source changes have been pushed and the local two
 2. Select the branch containing the verified changes and the Node runtime.
 3. Set the build command to `npm ci --include=dev && npm run build`.
 4. Set the start command to `npm start`.
-5. Set `NODE_ENV=production`, `HOST=0.0.0.0`, and `MONGODB_URI` to the secret Atlas connection string. Use Node 22.12 or later.
+5. Set `NODE_ENV=production`, `HOST=0.0.0.0`, and `MONGODB_URI` to the secret Atlas connection string. The repository pins Node 24.21.0 in `.node-version`. An existing Render `NODE_VERSION` overrides this file, so remove that override or set it to `24.21.0`.
 6. Set `APP_ORIGIN` to the exact generated HTTPS origin, without a trailing slash. If the URL is assigned after creation, add this value and redeploy before testing account actions.
 7. Verify the proxy topology with the host's documentation/support, then set `TRUST_PROXY` to the appropriate trusted IP ranges or hop count. This determines which client IP the login limiter uses. A hop count of `1` is appropriate only when every inbound request reaches Express through exactly one trusted proxy. A blanket `true` is rejected.
 8. Let the host provide `PORT`. Set the health-check path to `/api/health`.

@@ -8,7 +8,7 @@ Coordinators create a team, invite technicians and assign visits to team members
 
 ## Run the assignment
 
-Install Node.js 22.12 or later. From the project folder, run the following commands.
+Install Node.js 24.21.0 (the pinned runtime). From the project folder, run the following commands.
 
 ```powershell
 npm ci

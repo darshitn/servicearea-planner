@@ -12,6 +12,7 @@ test('nested database failures have actionable diagnostics without leaking crede
     [{ code: 13 }, 'DATABASE_PERMISSION'],
     [{ name: 'MongoParseError' }, 'URI_FORMAT'],
     [{ cause: { code: 'CERT_HAS_EXPIRED' } }, 'TLS_FAILED'],
+    [{ cause: { code: 'ERR_SSL_TLSV1_ALERT_INTERNAL_ERROR' } }, 'Atlas Network Access'],
   ]
   for (const [error, expected] of cases) {
     error.message = secret
