@@ -2,11 +2,31 @@
 
 **CIA assignment · N DARSHIT · 2102508605**
 
-A coordinator can open a day's schedule, see which staff member is visiting each customer, and plan the route one service area at a time. Visits within an area appear in appointment order. The coordinator decides how to travel between areas.
+**[Open the live application](https://servicearea-planner.onrender.com/) · [Run locally](#run-locally) · [Evaluator walkthrough](#evaluator-walkthrough)**
 
-Coordinators create a team, invite technicians and assign visits to team members. Technicians can update the status and notes of their assigned visits. Use consistent area names, since grouping uses the area field.
+ServiceArea Planner helps small field-service teams schedule visits, assign technicians and track completed work. The daily itinerary groups visits by service area and lists them in appointment order so coordinators can plan routes manually.
 
-## Run the assignment
+![Coordinator dashboard with fictional visits grouped by area, appointment windows, assigned technicians and completion status](docs/images/itinerary.jpg)
+
+*Coordinator itinerary with fictional visits.*
+
+<details>
+<summary>View the sign-in screen</summary>
+
+![ServiceArea Planner sign-in page with options to sign in, create a team or join a team](docs/images/sign-in.jpg)
+
+</details>
+
+The first visit to the live application may take longer while Render wakes the service. Use fictional customer information when trying the app.
+
+## What each role can do
+
+| Role | Workflow |
+| --- | --- |
+| Coordinator | Create a team, invite technicians, schedule and assign visits, and edit or delete work orders. |
+| Technician | Join a team using an invitation, view the daily itinerary, and update the status and completion notes of assigned visits. |
+
+## Run locally
 
 Install Node.js 24.21.0 (the pinned runtime). From the project folder, run the following commands.
 
@@ -17,45 +37,31 @@ npm run demo
 
 Open **http://127.0.0.1:4000**. On first use, the demo downloads a MongoDB server binary. The Windows download is about 600 MB. Subsequent launches reuse the cached binary.
 
-Create a coordinator account using **Create team**. The local database is saved in `.local/demo-data/`. Existing visits created before teams were introduced remain in the database but are not shown in team workspaces. Stop the demo with Ctrl+C.
+Create a coordinator account using **Create team**. A new team starts with an empty itinerary. The local database is saved in `.local/demo-data/`. Stop the demo with Ctrl+C.
 
 Create a technician invitation from the dashboard and share its link. Invitations are single-use and expire after 24 hours. The technician can register through the link and then be assigned visits.
 
-## Hosted configuration
+## Evaluator walkthrough
 
-Use a Node hosting service with HTTPS and an external MongoDB database. Set these values in the host's environment configuration:
-
-- Build command: `npm ci --include=dev && npm run build`
-- Start command: `npm start`
-- `MONGODB_URI`: Atlas connection string, stored as a secret
-- `NODE_ENV=production`: enables secure session cookies
-- `APP_ORIGIN`: the exact public HTTPS origin, without a trailing slash
-- `PORT`: supplied by the host
-- `HOST=0.0.0.0`: required by typical web-service hosts
-- `TRUST_PROXY`: verified trusted proxy IP ranges or hop count for the chosen host. Leave unset for direct connections. Never set blindly to `true`.
-
-The database user needs permission to create indexes and read and write application collections. The app serves React and the API from the same origin. Never commit the real connection string or `.env` file.
-
-Email verification and password reset, member removal, invitation revocation, and real-time updates are not implemented. Authentication attempt limits are stored in MongoDB and shared across server processes. Deployment still requires verification of the host's proxy configuration and the browser workflow over HTTPS.
-
-See [DEPLOYMENT.md](DEPLOYMENT.md) for the Atlas and hosting walkthrough.
-
-## Demonstrate the workflow
-
-1. Register a coordinator and open today's itinerary.
-2. Select **New work order**. Enter a customer, job, address and assigned staff member. Choose an existing area and a time between two visits to see the new order inserted in the right place.
-3. Edit the visit and select **Completed**. Try saving with empty completion notes, then enter the work performed and save. Filter by **Completed** to show the updated visit.
-4. Move the visit to tomorrow. Switch between the dates, refresh the browser and check that the change persists. Use **Delete visit** inside the edit form to remove a work order.
+1. Open the live app and choose **Create team** to register as the coordinator.
+2. Select **Create technician invitation**. In a private browser window, choose **Join team**, paste the full invitation link, and register with a different email address.
+3. In the coordinator window, select **New work order** and assign a fictional visit to the technician. Add a second visit in the same area with a different start time to see the grouping and ordering.
+4. In the technician window, refresh the itinerary and open the assigned visit. Choose **Completed**, enter completion notes, and save. Refresh the coordinator window and filter by **Completed** to verify the change.
+5. Sign out and sign back in to see that the work orders persist.
 
 ## How it works
 
 - **React** requests work orders for the selected local date. The itinerary groups area names case-insensitively, sorts visits by start time, and can filter the results by status.
-- **Express** validates the complete order on creation or after a partial update. Both ends of the time window must fall on the same day, the end must be later than the start, and a completed order must include a note. Failed requests return a JSON error and an appropriate HTTP status.
-- **MongoDB** stores one document per work order. The date, area and start time are indexed for the daily list. Dates use `YYYY-MM-DD` and times use 24-hour `HH:MM` so a local appointment stays on its intended day.
+- **Node.js and Express** serve the React build and REST API from the same origin. The API uses cookie sessions, enforces team and role permissions, and validates appointment windows and completion notes.
+- **MongoDB** stores accounts, sessions, invitations, and work orders. Work orders are indexed by team, date, area and start time. The hosted app uses MongoDB Atlas.
+
+The live app runs on Render. See [DEPLOYMENT.md](DEPLOYMENT.md) for setup and deployment checks.
 
 | Method | Endpoint | Result |
 | --- | --- | --- |
 | GET | `/api/health` | Checks MongoDB connectivity |
+| POST | `/api/auth/register`, `/api/auth/login`, `/api/auth/join` | Creates a coordinator, signs in, or accepts a technician invitation |
+| POST | `/api/team/invitations` | Issues a single-use technician invitation |
 | GET | `/api/work-orders?date=2026-11-04` | Returns work orders for that date |
 | POST | `/api/work-orders` | Creates a work order and returns its ID |
 | PATCH | `/api/work-orders/:id` | Updates the specified fields and returns the saved order |
@@ -79,7 +85,7 @@ npm test
 npm run build
 ```
 
-The integration suite starts a separate temporary MongoDB server. It exercises the REST API over HTTP, including invalid requests, persistence across independent client connections, date filtering, ordering, repeatable seeding and deletion.
+The integration suite uses a temporary MongoDB server. It checks work-order validation and persistence, role and team isolation, session expiry, single-use invitations, and login throttling.
 
 | File | Responsibility |
 | --- | --- |
@@ -90,3 +96,7 @@ The integration suite starts a separate temporary MongoDB server. It exercises t
 | `server/start.js` | Database connection, index and HTTP server lifecycle |
 | `scripts/demo.js` | Starts the disk-backed local demo |
 | `tests/work-orders.test.js` | HTTP and MongoDB integration checks |
+
+## Scope
+
+The itinerary supports manual route planning. Account recovery, email verification, member removal, invitation revocation, and real-time updates are outside the current scope.
